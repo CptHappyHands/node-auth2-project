@@ -3,13 +3,12 @@ const router = require("express").Router();
 const { checkUsernameExists, validateRoleName } = require("./auth-middleware");
 const Users = require("../users/users-model");
 const tokenBuilder = require("./token-builder");
-const { JWT_SECRET } = require("../secrets"); // use this secret!
+// const { JWT_SECRET } = require("../secrets"); // use this secret!
 
 router.post("/register", validateRoleName, (req, res, next) => {
   const { username, password } = req.body;
   const { role_name } = req;
-  const rounds = process.env.BCRYPT_ROUNDS || 8;
-  const hash = bcrypt.hashSync(password, rounds);
+  const hash = bcrypt.hashSync(password, 8);
   Users.add({ username, password: hash, role_name })
     .then((data) => {
       res.status(201).json(data);
@@ -29,22 +28,34 @@ router.post("/register", validateRoleName, (req, res, next) => {
 });
 
 router.post("/login", checkUsernameExists, (req, res, next) => {
-  let { username, password } = req.body;
+  if (bcrypt.compareSync(req.body.password, req.user.password)) {
+    const token = tokenBuilder(req.user);
+    res.status(200).json({
+      message: `${req.user.username} is back!`,
+      token,
+    });
+  } else {
+    next({
+      status: 401,
+      message: "Invalid credentials",
+    });
+  }
+  // let { username, password } = req.body;
 
-  Users.findBy({ username })
-    .then((user) => {
-      if (user && bcrypt.compareSync(password, user.password)) {
-        console.log(user);
-        const token = tokenBuilder(user);
-        res.status(200).json({
-          message: `${req.user.username} is back!`,
-          token,
-        });
-      } else {
-        next({ status: 401, message: "Invalid Credentials" });
-      }
-    })
-    .catch(next);
+  // Users.findBy({ username })
+  //   .then((user) => {
+  //     if (user && bcrypt.compareSync(password, user.password)) {
+  //       console.log(user);
+  //       const token = tokenBuilder(user);
+  //       res.status(200).json({
+  //         message: `${req.user.username} is back!`,
+  //         token,
+  //       });
+  //     } else {
+  //       next({ status: 401, message: "Invalid Credentials" });
+  //     }
+  //   })
+  //   .catch(next);
   // try {
   //   const { username, password } = req.body;
   //   const existing = await Users.findBy({ username });

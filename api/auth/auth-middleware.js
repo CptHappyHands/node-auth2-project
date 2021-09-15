@@ -1,6 +1,6 @@
 const { JWT_SECRET } = require("../secrets"); // use this secret!
 const jwt = require("jsonwebtoken");
-const Users = require("../users/users-model");
+const { findBy } = require("../users/users-model");
 
 const restricted = (req, res, next) => {
   const token = req.headers.authorization;
@@ -9,14 +9,16 @@ const restricted = (req, res, next) => {
       status: 401,
       message: "Token required",
     });
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err)
-      return next({
+  jwt.verify(token, JWT_SECRET, (err, decodedToken) => {
+    if (err) {
+      next({
         status: 401,
         message: "Token invalid",
       });
-    req.decodedJwt = decoded;
-    next();
+    } else {
+      req.decodedToken = decodedToken;
+      next();
+    }
   });
   /*
     If the user does not provide a token in the Authorization header:
@@ -36,8 +38,7 @@ const restricted = (req, res, next) => {
 };
 
 const only = (role_name) => (req, res, next) => {
-  const { decodedJwt } = req.body;
-  if (decodedJwt.role_name === role_name) {
+  if (role_name === req.decodedToken.role_name) {
     next();
   } else {
     next({
@@ -45,12 +46,15 @@ const only = (role_name) => (req, res, next) => {
       message: "This is not for you",
     });
   }
-  // const token = req.headers.authorization;
-  // if (token.role_name !== role_name)
-  //   return next({
+  // const { decodedJwt } = req.body;
+  // if (decodedJwt.role_name === role_name) {
+  //   next();
+  // } else {
+  //   next({
   //     status: 403,
   //     message: "This is not for you",
   //   });
+  // }
 
   /*
     If the user does not provide a token in the Authorization header with a role_name
@@ -66,14 +70,15 @@ const only = (role_name) => (req, res, next) => {
 
 const checkUsernameExists = async (req, res, next) => {
   try {
-    const users = await Users.findBy({ username: req.body.username });
-    if (users.length) {
-      next();
-    } else {
+    const [users] = await findBy({ username: req.body.username });
+    if (!users) {
       next({
         status: 401,
         message: "Invalid credentials",
       });
+    } else {
+      req.users = users;
+      next();
     }
   } catch (err) {
     next(err);
