@@ -2,16 +2,17 @@ const bcrypt = require("bcryptjs");
 const router = require("express").Router();
 const { checkUsernameExists, validateRoleName } = require("./auth-middleware");
 const Users = require("../users/users-model");
+const tokenBuilder = require("./token-builder");
 const { JWT_SECRET } = require("../secrets"); // use this secret!
 
 router.post("/register", validateRoleName, (req, res, next) => {
-  let user = req.body;
+  const { username, password } = req.body;
+  const { role_name } = req;
   const rounds = process.env.BCRYPT_ROUNDS || 8;
-  const hash = bcrypt.hashSync(user.password, rounds);
-  user.password = hash;
-  Users.add(user)
+  const hash = bcrypt.hashSync(password, rounds);
+  Users.add({ username, password: hash, role_name })
     .then((data) => {
-      res.status(201).json({ message: `I am user ${data.username}` });
+      res.status(201).json(data);
     })
     .catch(next);
   /**
@@ -28,6 +29,40 @@ router.post("/register", validateRoleName, (req, res, next) => {
 });
 
 router.post("/login", checkUsernameExists, (req, res, next) => {
+  let { username, password } = req.body;
+
+  Users.findBy({ username })
+    .then((user) => {
+      if (user && bcrypt.compareSync(password, user.password)) {
+        console.log(user);
+        const token = tokenBuilder(user);
+        res.status(200).json({
+          message: `${req.user.username} is back!`,
+          token,
+        });
+      } else {
+        next({ status: 401, message: "Invalid Credentials" });
+      }
+    })
+    .catch(next);
+  // try {
+  //   const { username, password } = req.body;
+  //   const existing = await Users.findBy({ username });
+  //   if (existing.length && bcrypt.compareSync(password, existing[0].password)) {
+  //     req.user = existing[0];
+  //     const token = tokenBuilder(existing);
+  //     res.json({
+  //       status: 200,
+  //       message: `${req.user.username} is back!`,
+  //       token,
+  //     });
+  //   } else {
+  //     next({ status: 401, message: "Invalid credentials" });
+  //   }
+  // } catch (err) {
+  //   next(err);
+  // }
+
   /**
     [POST] /api/auth/login { "username": "sue", "password": "1234" }
 
