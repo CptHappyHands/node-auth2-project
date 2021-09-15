@@ -7,8 +7,10 @@ const tokenBuilder = require("./token-builder");
 
 router.post("/register", validateRoleName, (req, res, next) => {
   const { username, password } = req.body;
+
   const { role_name } = req;
   const hash = bcrypt.hashSync(password, 8);
+
   Users.add({ username, password: hash, role_name })
     .then((data) => {
       res.status(201).json(data);
@@ -28,10 +30,12 @@ router.post("/register", validateRoleName, (req, res, next) => {
 });
 
 router.post("/login", checkUsernameExists, (req, res, next) => {
-  if (bcrypt.compareSync(req.body.password, req.user.password)) {
-    const token = tokenBuilder(req.user);
+  // const { password, username } = req.body;
+  // console.log(password, username);
+  if (bcrypt.compareSync(req.body.password, req.users.password)) {
+    const token = tokenBuilder(req.users);
     res.status(200).json({
-      message: `${req.user.username} is back!`,
+      message: `${req.users.username} is back!`,
       token,
     });
   } else {

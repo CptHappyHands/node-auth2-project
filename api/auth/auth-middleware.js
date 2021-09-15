@@ -16,7 +16,7 @@ const restricted = (req, res, next) => {
         message: "Token invalid",
       });
     } else {
-      req.decodedToken = decodedToken;
+      req.decodedJwt = decodedToken;
       next();
     }
   });
@@ -38,7 +38,7 @@ const restricted = (req, res, next) => {
 };
 
 const only = (role_name) => (req, res, next) => {
-  if (role_name === req.decodedToken.role_name) {
+  if (role_name === req.decodedJwt.role_name) {
     next();
   } else {
     next({
