@@ -3,7 +3,7 @@ const db = require("../../data/db-config.js");
 function find() {
   return db("users as u")
     .join("roles as r", "u.role_id", "=", "r.role_id")
-    .select("u.user_id", "u.username", "u.role_id");
+    .select("u.user_id", "u.username", "r.role_name");
   /**
     You will need to join two tables.
     Resolves to an ARRAY with all users.
@@ -26,7 +26,7 @@ function find() {
 function findBy(filter) {
   return db("users as u")
     .join("roles as r", "u.role_id", "=", "r.role_id")
-    .select("u.user_id", "u.username", "u.role_id", "u.password")
+    .select("u.user_id", "u.username", "r.role_name", "u.password")
     .where(filter);
   /**
     You will need to join two tables.
@@ -46,7 +46,7 @@ function findBy(filter) {
 function findById(user_id) {
   return db("users as u")
     .join("roles as r", "u.role_id", "=", "r.role_id")
-    .select("u.user_id", "u.username", "u.role_id")
+    .select("u.user_id", "u.username", "u.role_name")
     .where("u.user_id", user_id)
     .first();
 
